@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { CloseIcon } from './Icons';
 
 // --- A professionally styled SVG map of India ---
 // Updated with a lighter, cleaner fill and stroke for a modern look.
@@ -18,11 +19,11 @@ const IndiaMap: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const locations = [
-  { id: 'gwalior', name: 'Gwalior', province: 'Madhya Pradesh', pos: 'top-[44%] left-[46%]' },
-  { id: 'dabra', name: 'Dabra', province: 'Madhya Pradesh', pos: 'top-[47%] left-[46.5%]' },
-  { id: 'morena', name: 'Morena', province: 'Madhya Pradesh', pos: 'top-[41%] left-[46.2%]' },
-  { id: 'indore', name: 'Indore', province: 'Madhya Pradesh', pos: 'top-[53%] left-[42%]' },
-  { id: 'bhopal', name: 'Bhopal', province: 'Madhya Pradesh', pos: 'top-[50%]' },
+  { id: 'gwalior', name: 'Gwalior', province: 'Madhya Pradesh', pos: 'top-[44%] left-[46%]', description: 'Headquarters for our "Project Udaan" education initiative and "Ann Seva" food drives.' },
+  { id: 'dabra', name: 'Dabra', province: 'Madhya Pradesh', pos: 'top-[47%] left-[46.5%]', description: 'Focused on women\'s safety workshops and healthcare camps under "Jeevan Jyoti".' },
+  { id: 'morena', name: 'Morena', province: 'Madhya Pradesh', pos: 'top-[41%] left-[46.2%]', description: 'Implementing sustainable agriculture practices and environmental awareness programs.' },
+  { id: 'indore', name: 'Indore', province: 'Madhya Pradesh', pos: 'top-[53%] left-[42%]', description: 'Expanding our skill development programs for economic empowerment in urban areas.' },
+  { id: 'bhopal', name: 'Bhopal', province: 'Madhya Pradesh', pos: 'top-[50%]', description: 'Collaborating with local authorities on disaster relief readiness and community development.' },
 ];
 
 // --- Enhanced, Interactive Location Card ---
@@ -56,9 +57,29 @@ const LocationCard: React.FC<{
 
 // --- The Main, Refactored Presence Component ---
 const Presence: React.FC = () => {
-  // State to track the currently active and hovered locations
-  const [activeLocation, setActiveLocation] = useState(locations[0].id);
+  const [activeLocation, setActiveLocation] = useState<string | null>(locations[0].id);
   const [hoveredLocation, setHoveredLocation] = useState<string | null>(null);
+  const [renderedLocation, setRenderedLocation] = useState<string | null>(locations[0].id);
+  const [animationClass, setAnimationClass] = useState('animate-scaleIn');
+
+  useEffect(() => {
+    if (activeLocation) {
+      setRenderedLocation(activeLocation);
+      setAnimationClass('animate-scaleIn');
+    } else if (renderedLocation) {
+      setAnimationClass('animate-scaleOut');
+      const timer = setTimeout(() => {
+        setRenderedLocation(null);
+      }, 300); // Must match CSS animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [activeLocation, renderedLocation]);
+
+  const handleLocationClick = (id: string) => {
+    setActiveLocation(prevId => (prevId === id ? null : id));
+  };
+
+  const renderedLocationData = locations.find(loc => loc.id === renderedLocation);
 
   return (
     <section className="bg-gray-50 py-20">
@@ -91,20 +112,59 @@ const Presence: React.FC = () => {
                         onMouseLeave={() => setHoveredLocation(null)}
                     >
                         <button 
-                        onClick={() => setActiveLocation(loc.id)}
-                        className="relative flex items-center justify-center w-8 h-8 focus:outline-none"
-                        aria-label={`Select ${loc.name}`}
+                          onClick={() => handleLocationClick(loc.id)}
+                          className="relative flex items-center justify-center w-8 h-8 focus:outline-none"
+                          aria-label={`Select ${loc.name}`}
                         >
-                        <div className={`absolute animate-ping-slow w-full h-full rounded-full ${isActive ? 'bg-indigo-400' : 'bg-green-300'}`}></div>
-                        <div className={`relative w-4 h-4 bg-white rounded-full border-4 ${isActive ? 'border-indigo-600' : 'border-green-600'}`}></div>
+                          <div className={`absolute animate-ping-slow w-full h-full rounded-full ${isActive ? 'bg-indigo-400' : 'bg-green-300'}`}></div>
+                          <div className={`relative w-4 h-4 bg-white rounded-full border-4 ${isActive ? 'border-indigo-600' : 'border-green-600'}`}></div>
                         </button>
                         <div className={`absolute bottom-full mb-3 w-max bg-gray-800 text-white text-sm font-bold py-1 px-3 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none transform -translate-x-1/2 left-1/2 whitespace-nowrap`}>
-                        {loc.name}
+                          {loc.name}
                         </div>
                     </div>
                 );
             })}
-             <style>{`.animate-ping-slow { animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }`}</style>
+
+            {/* Pop-up Card for Active Location */}
+            {renderedLocationData && (
+              <div
+                key={renderedLocationData.id}
+                className={`popup-card absolute bg-white rounded-lg shadow-2xl border border-gray-200 z-20 w-64 ${animationClass} ${renderedLocationData.pos}`}
+              >
+                <div className="p-4 relative">
+                   <button 
+                      onClick={() => setActiveLocation(null)}
+                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-800"
+                      aria-label="Close pop-up"
+                    >
+                      <CloseIcon className="w-5 h-5" />
+                    </button>
+                  <div>
+                    <h4 className="font-bold text-lg text-gray-900 pr-6">{renderedLocationData.name}</h4>
+                    <p className="text-sm font-semibold text-indigo-600 mb-2">{renderedLocationData.province}</p>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">{renderedLocationData.description}</p>
+                </div>
+                {/* Pointer Arrow */}
+                <div className="absolute left-1/2 -bottom-2 transform -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-b border-r border-gray-200"></div>
+              </div>
+            )}
+            
+            <style>{`
+              .animate-ping-slow { animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+              .popup-card { transform-origin: bottom center; }
+              @keyframes scaleIn { 
+                from { transform: translate(-50%, -100%) scale(0.8); opacity: 0; } 
+                to { transform: translate(-50%, calc(-100% - 1.5rem)) scale(1); opacity: 1; } 
+              }
+              @keyframes scaleOut { 
+                from { transform: translate(-50%, calc(-100% - 1.5rem)) scale(1); opacity: 1; } 
+                to { transform: translate(-50%, -100%) scale(0.8); opacity: 0; } 
+              }
+              .animate-scaleIn { animation: scaleIn 0.3s ease-out forwards; }
+              .animate-scaleOut { animation: scaleOut 0.3s ease-in forwards; }
+            `}</style>
           </div>
           
           {/* Location List Column */}
@@ -117,7 +177,7 @@ const Presence: React.FC = () => {
                   location={loc}
                   isActive={activeLocation === loc.id}
                   isHighlighted={hoveredLocation === loc.id}
-                  onClick={() => setActiveLocation(loc.id)}
+                  onClick={() => handleLocationClick(loc.id)}
                   onHover={setHoveredLocation}
                 />
               ))}
